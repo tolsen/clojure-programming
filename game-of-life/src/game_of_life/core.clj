@@ -71,12 +71,38 @@
      board (for [x (range h) y (range w)] [x y]))))
 
 (defn window
-  [coll]
-  (partition 3 1 (concat [nil] coll [nil])))
+  ([coll]
+     (window nil coll))
+  ([pad coll]
+     (partition 3 1 (concat [pad] coll [pad]))))
 
 (defn cell-block
   [[left mid right]]
   (window (map vector
-               (or left (repeat nil))
+               left
                mid
-               (or right (repeat nil)))))
+               right)))
+
+(defn liveness
+  [block]
+  (let [[_ [_ center _] _] block]
+    (case (- (count (filter #{:on} (apply concat block)))
+             (if (= :on center) 1 0))
+      2 center
+      3 :on
+      nil)))
+
+(defn step-row
+  [rows-triple]
+  (vec (map liveness (cell-block rows-triple))))
+
+(defn index-free-step
+  [board]
+  (vec (map step-row (window (repeat nil) board))))
+
+
+(defn step
+  [cells]
+  (set (for [[loc n] (frequencies (mapcat neighbours cells))
+             :when (or (= n 3) (and (= n 2) (cells loc)))]
+         loc)))
